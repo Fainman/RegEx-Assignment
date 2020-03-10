@@ -15,13 +15,27 @@ public class RegExMatcher {
       if (pattern.charAt(i) == '(' || pattern.charAt(i) == '|') {
         ops.push(i);
       } else if (pattern.charAt(i) == ')') {
+        LinkedList<Integer> orList = new LinkedList<Integer>();
+        int rp = i;
         int or = ops.pop();
 
-        // 2-way OR
+        /* 2-way OR
         if (pattern.charAt(or) == '|') {
           lp = ops.pop();
           g.addEdge(lp, or + 1);
-          g.addEdge(or, i);
+          g.addEdge(or, i);*/
+
+        // multiway OR
+        if (pattern.charAt(or) == '|') {
+          do {
+            orList.add(or);
+            or = ops.pop();
+          } while (pattern.charAt(or) == '|');
+          lp = or;
+          for (int orLocation : orList){
+            g.addEdge(lp, orLocation + 1);
+            g.addEdge(orLocation, rp);
+          }
         } else if (pattern.charAt(or) == '(') {
           lp = or;
         } else {
@@ -34,8 +48,22 @@ public class RegExMatcher {
         g.addEdge(lp, i + 1);
         g.addEdge(i + 1, lp);
       }
+      // Closure +
+      if (i < M - 1 && pattern.charAt(i + 1) == '+') {
+        g.addEdge(i + 1, lp);
+      }
+      // Closure ?
+      if (i < M - 1 && pattern.charAt(i + 1) == '?') {
+        g.addEdge(lp, i + 1);
+      }
 
-      if (pattern.charAt(i) == '(' || pattern.charAt(i) == '*' || pattern.charAt(i) == ')') {
+
+      // Add epsilon transitions from metachars
+      if (pattern.charAt(i) == '(' || 
+          pattern.charAt(i) == '*' || 
+          pattern.charAt(i) == ')' ||
+          pattern.charAt(i) == '+' ||
+          pattern.charAt(i) == '?') {
         g.addEdge(i, i + 1);
       }
     }
@@ -62,7 +90,9 @@ public class RegExMatcher {
     for (int i = 0; i < text.length(); i++) {
       // Don't allow metacharacters (used in specifying patterns) in text
       if (text.charAt(i) == '*' || text.charAt(i) == '|' ||
-          text.charAt(i) == '(' || text.charAt(i) == ')') {
+          text.charAt(i) == '(' || text.charAt(i) == ')' ||
+          text.charAt(i) == '?' || text.charAt(i) == '+' || 
+          text.charAt(i) == '.') {
         throw new IllegalArgumentException("Metacharacters (, *, |, and ) not allowed.");
       }
 
